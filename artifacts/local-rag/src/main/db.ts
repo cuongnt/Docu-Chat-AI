@@ -53,10 +53,48 @@ function initSchema(db: Database.Database): void {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    -- Chat history
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+      content TEXT NOT NULL,
+      sources TEXT,
+      search_mode TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
   `);
 }
 
 // ── Row types ─────────────────────────────────────────────────────────────────
+
+export interface ChatSessionRow {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count?: number;
+}
+
+export interface ChatMessageRow {
+  id: number;
+  session_id: number;
+  role: "user" | "assistant";
+  content: string;
+  sources: string | null;
+  search_mode: string | null;
+  created_at: string;
+}
 
 export interface DocRow {
   id: number;
@@ -220,6 +258,86 @@ export function countEmbeddingsForDoc(
     )
     .get(docId) as { cnt: number };
   return result.cnt;
+}
+
+// ── Chat History ─────────────────────────────────────────────────────────────
+
+export function createChatSession(
+  db: Database.Database,
+  title: string
+): number {
+  const stmt = db.prepare(
+    "INSERT INTO chat_sessions (title) VALUES (?)"
+  );
+  return stmt.run(title).lastInsertRowid as number;
+}
+
+export function updateChatSessionTitle(
+  db: Database.Database,
+  id: number,
+  title: string
+): void {
+  db.prepare(
+    "UPDATE chat_sessions SET title = ?, updated_at = datetime('now') WHERE id = ?"
+  ).run(title, id);
+}
+
+export function touchChatSession(db: Database.Database, id: number): void {
+  db.prepare(
+    "UPDATE chat_sessions SET updated_at = datetime('now') WHERE id = ?"
+  ).run(id);
+}
+
+export function getChatSessions(
+  db: Database.Database
+): ChatSessionRow[] {
+  return db
+    .prepare(
+      `SELECT s.id, s.title, s.created_at, s.updated_at,
+              COUNT(m.id) AS message_count
+       FROM chat_sessions s
+       LEFT JOIN chat_messages m ON m.session_id = s.id
+       GROUP BY s.id
+       ORDER BY s.updated_at DESC`
+    )
+    .all() as ChatSessionRow[];
+}
+
+export function getSessionMessages(
+  db: Database.Database,
+  sessionId: number
+): ChatMessageRow[] {
+  return db
+    .prepare(
+      "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY id ASC"
+    )
+    .all(sessionId) as ChatMessageRow[];
+}
+
+export function insertChatMessage(
+  db: Database.Database,
+  sessionId: number,
+  role: "user" | "assistant",
+  content: string,
+  sources: string | null,
+  searchMode: string | null
+): number {
+  const stmt = db.prepare(
+    `INSERT INTO chat_messages (session_id, role, content, sources, search_mode)
+     VALUES (?, ?, ?, ?, ?)`
+  );
+  const id = stmt.run(sessionId, role, content, sources, searchMode)
+    .lastInsertRowid as number;
+  touchChatSession(db, sessionId);
+  return id;
+}
+
+export function deleteChatSession(db: Database.Database, id: number): void {
+  db.prepare("DELETE FROM chat_sessions WHERE id = ?").run(id);
+}
+
+export function deleteAllChatSessions(db: Database.Database): void {
+  db.prepare("DELETE FROM chat_sessions").run();
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────

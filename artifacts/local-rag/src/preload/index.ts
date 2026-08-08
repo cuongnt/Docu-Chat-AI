@@ -3,6 +3,8 @@ import type {
   ElectronAPI,
   ChatDonePayload,
   EmbeddingProgress,
+  SourceChunk,
+  SearchMode,
 } from "../shared/types";
 
 const api: ElectronAPI = {
@@ -64,6 +66,31 @@ const api: ElectronAPI = {
     ipcRenderer.on("embedding:progress", handler);
     return () => ipcRenderer.removeListener("embedding:progress", handler);
   },
+
+  // Chat history
+  listSessions: () => ipcRenderer.invoke("history:list-sessions"),
+  getSessionMessages: (sessionId) =>
+    ipcRenderer.invoke("history:get-messages", sessionId),
+  createSession: (title) => ipcRenderer.invoke("history:create-session", title),
+  saveMessage: (
+    sessionId: number,
+    role: "user" | "assistant",
+    content: string,
+    sources: SourceChunk[] | null,
+    searchMode: SearchMode | null
+  ) =>
+    ipcRenderer.invoke("history:save-message", {
+      sessionId,
+      role,
+      content,
+      sources,
+      searchMode,
+    }),
+  deleteSession: (sessionId) =>
+    ipcRenderer.invoke("history:delete-session", sessionId),
+  deleteAllSessions: () => ipcRenderer.invoke("history:delete-all-sessions"),
+  exportSession: (sessionId, format) =>
+    ipcRenderer.invoke("history:export-session", { sessionId, format }),
 };
 
 contextBridge.exposeInMainWorld("electronAPI", api);

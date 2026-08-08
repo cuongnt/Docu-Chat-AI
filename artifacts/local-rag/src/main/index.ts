@@ -19,7 +19,14 @@ import {
   getSetting,
   setSetting,
   countEmbeddingsForDoc,
+  getChatSessions,
+  getSessionMessages,
+  createChatSession,
+  insertChatMessage,
+  deleteChatSession,
+  deleteAllChatSessions,
 } from "./db";
+import fs from "fs";
 import { extractText, chunkText } from "./doc-parser";
 import { loadModel, unloadModel, getModelInfo } from "./llm";
 import { queryRag, summarizeDocument } from "./rag";
@@ -373,6 +380,156 @@ async function generateEmbeddingsForDoc(docId: number): Promise<void> {
     upsertEmbeddingsBulk(db, rows);
   }
 }
+
+// ── Chat History IPC ──────────────────────────────────────────────────────────
+
+ipcMain.handle("history:list-sessions", () => {
+  const db = getDb();
+  return getChatSessions(db).map((s) => ({
+    id: s.id,
+    title: s.title,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    messageCount: s.message_count ?? 0,
+  }));
+});
+
+ipcMain.handle("history:get-messages", (_, sessionId: number) => {
+  const db = getDb();
+  return getSessionMessages(db, sessionId).map((m) => ({
+    id: m.id,
+    sessionId: m.session_id,
+    role: m.role,
+    content: m.content,
+    sources: m.sources ? JSON.parse(m.sources) : null,
+    searchMode: m.search_mode ?? null,
+    createdAt: m.created_at,
+  }));
+});
+
+ipcMain.handle("history:create-session", (_, title: string) => {
+  const db = getDb();
+  const id = createChatSession(db, title || "Phiên mới");
+  return { id };
+});
+
+ipcMain.handle(
+  "history:save-message",
+  (
+    _,
+    {
+      sessionId,
+      role,
+      content,
+      sources,
+      searchMode,
+    }: {
+      sessionId: number;
+      role: "user" | "assistant";
+      content: string;
+      sources: unknown[] | null;
+      searchMode: string | null;
+    }
+  ) => {
+    const db = getDb();
+    const id = insertChatMessage(
+      db,
+      sessionId,
+      role,
+      content,
+      sources ? JSON.stringify(sources) : null,
+      searchMode
+    );
+    return { id };
+  }
+);
+
+ipcMain.handle("history:delete-session", (_, sessionId: number) => {
+  const db = getDb();
+  deleteChatSession(db, sessionId);
+  return { success: true };
+});
+
+ipcMain.handle("history:delete-all-sessions", () => {
+  const db = getDb();
+  deleteAllChatSessions(db);
+  return { success: true };
+});
+
+ipcMain.handle(
+  "history:export-session",
+  async (
+    _,
+    { sessionId, format }: { sessionId: number; format: "md" | "txt" }
+  ) => {
+    try {
+      const db = getDb();
+      const sessions = getChatSessions(db);
+      const session = sessions.find((s) => s.id === sessionId);
+      if (!session) return { success: false, error: "Không tìm thấy phiên" };
+
+      const messages = getSessionMessages(db, sessionId);
+
+      let content = "";
+      if (format === "md") {
+        content += `# ${session.title}\n\n`;
+        content += `_${new Date(session.created_at).toLocaleString("vi-VN")}_\n\n---\n\n`;
+        for (const m of messages) {
+          const prefix = m.role === "user" ? "**Bạn**" : "**AI**";
+          content += `${prefix}\n\n${m.content}\n\n`;
+          if (m.sources) {
+            try {
+              const srcs = JSON.parse(m.sources) as Array<{
+                label: string;
+                content: string;
+              }>;
+              if (srcs.length > 0) {
+                content += `<details><summary>Nguồn (${srcs.length})</summary>\n\n`;
+                srcs.forEach((s) => {
+                  content += `**${s.label}**: ${s.content.slice(0, 200)}…\n\n`;
+                });
+                content += `</details>\n\n`;
+              }
+            } catch {
+              // skip malformed sources
+            }
+          }
+          content += "---\n\n";
+        }
+      } else {
+        content += `${session.title}\n`;
+        content += `${new Date(session.created_at).toLocaleString("vi-VN")}\n`;
+        content += "=".repeat(40) + "\n\n";
+        for (const m of messages) {
+          const prefix = m.role === "user" ? "[Bạn]" : "[AI]";
+          content += `${prefix}\n${m.content}\n\n`;
+        }
+      }
+
+      const result = await dialog.showSaveDialog({
+        title: "Xuất lịch sử hội thoại",
+        defaultPath: `${session.title.replace(/[^a-z0-9\u00C0-\u024F\s]/gi, "_")}.${format}`,
+        filters: [
+          format === "md"
+            ? { name: "Markdown", extensions: ["md"] }
+            : { name: "Text", extensions: ["txt"] },
+        ],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: "Đã hủy" };
+      }
+
+      fs.writeFileSync(result.filePath, content, "utf-8");
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+);
 
 // Re-export getAllChunksForDocs for completeness (used internally)
 export { getAllChunksForDocs };

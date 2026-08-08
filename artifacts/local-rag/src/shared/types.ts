@@ -54,6 +54,26 @@ export interface AppSettings {
   semanticSearch: boolean;
 }
 
+// ── Chat History ──────────────────────────────────────────────────────────────
+
+export interface ChatSession {
+  id: number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export interface ChatHistoryMessage {
+  id: number;
+  sessionId: number;
+  role: "user" | "assistant";
+  content: string;
+  sources: SourceChunk[] | null;
+  searchMode: SearchMode | null;
+  createdAt: string;
+}
+
 export type EmbeddingStatus = "idle" | "loading" | "ready" | "error";
 
 export interface EmbeddingStatusInfo {
@@ -101,6 +121,15 @@ export interface ElectronAPI {
   getEmbeddingStatus(): Promise<EmbeddingStatusInfo>;
   reembedAll(): Promise<{ success: boolean; done?: number; total?: number; error?: string }>;
   onEmbeddingProgress(callback: (progress: EmbeddingProgress) => void): () => void;
+
+  // Chat history
+  listSessions(): Promise<ChatSession[]>;
+  getSessionMessages(sessionId: number): Promise<ChatHistoryMessage[]>;
+  createSession(title: string): Promise<{ id: number }>;
+  saveMessage(sessionId: number, role: "user" | "assistant", content: string, sources: SourceChunk[] | null, searchMode: SearchMode | null): Promise<{ id: number }>;
+  deleteSession(sessionId: number): Promise<{ success: boolean }>;
+  deleteAllSessions(): Promise<{ success: boolean }>;
+  exportSession(sessionId: number, format: "md" | "txt"): Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {
