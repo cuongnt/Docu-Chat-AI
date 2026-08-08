@@ -51,17 +51,18 @@ jobs:
       - name: Download prebuilt better-sqlite3 for Electron 33
         shell: pwsh
         run: |
-          # electron-builder's bundled node-gyp has a bug: it passes /std:c++17
-          # which overrides c++20, causing build failure with Electron 33 headers.
-          # Solution: use prebuild-install to download prebuilt binary — no compile needed.
-          # npmRebuild=false in package.json ensures electron-builder won't try to rebuild.
-          $pkg = "node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3"
-          if (Test-Path $pkg) {
-            cd $pkg
+          # better-sqlite3 v11+ has prebuilt binaries for Electron 33.
+          # Run prebuild-install from the pnpm virtual store path.
+          # npmRebuild=false in package.json prevents electron-builder from recompiling.
+          $pkg = Get-ChildItem "node_modules/.pnpm" -Directory -Filter "better-sqlite3@*" | Select-Object -First 1
+          if ($pkg) {
+            $path = Join-Path $pkg.FullName "node_modules/better-sqlite3"
+            Write-Host "Found better-sqlite3 at: $path"
+            cd $path
             npx prebuild-install --runtime electron --target 33.4.11 --arch x64
             Write-Host "prebuild-install completed"
           } else {
-            Write-Host "WARNING: better-sqlite3 not found at expected pnpm path"
+            Write-Host "WARNING: better-sqlite3 not found in pnpm store"
           }
         continue-on-error: true
 
