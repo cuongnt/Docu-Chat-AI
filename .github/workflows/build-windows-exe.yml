@@ -5,6 +5,7 @@ on:
     branches: [main, master]
     paths:
       - 'artifacts/local-rag/**'
+      - '.github/workflows/build-windows-exe.yml'
   workflow_dispatch:  # Cho phép chạy thủ công từ GitHub Actions tab
 
 jobs:
@@ -20,23 +21,30 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup MSBuild (Visual Studio Build Tools)
+        uses: microsoft/setup-msbuild@v2
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Install dependencies
-        run: pnpm install --ignore-scripts --no-frozen-lockfile
-        # --no-frozen-lockfile: lockfile tạo trên Linux thiếu Windows-specific optional deps
-        # (e.g. @rollup/rollup-win32-x64-msvc), cần cho pnpm tự resolve lại trên Windows
+        shell: pwsh
+        run: |
+          # Xóa lockfile Linux để pnpm tạo lại với Windows optional deps
+          # (e.g. @rollup/rollup-win32-x64-msvc)
+          if (Test-Path pnpm-lock.yaml) { Remove-Item pnpm-lock.yaml }
+          pnpm install --ignore-scripts
 
       - name: Rebuild native modules for Electron
         working-directory: artifacts/local-rag
+        shell: pwsh
         run: |
-          npx electron-rebuild -f -w better-sqlite3
+          npx --yes @electron/rebuild -f -w better-sqlite3
         env:
           npm_config_msvs_version: '2022'
-        continue-on-error: true  # node-llama-cpp rebuild tốn thời gian, có thể bỏ qua
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '0'
 
       - name: Build app
         working-directory: artifacts/local-rag
