@@ -35,12 +35,12 @@ echo [OK] pnpm %PNPM_VERSION%
 :: Kiểm tra electron-builder
 echo.
 echo [INFO] Kiem tra electron-builder...
-call npx electron-builder --version > nul 2>&1
+call pnpm exec electron-builder --version > nul 2>&1
 if %errorlevel% neq 0 (
-    echo [INFO] Dang cai electron-builder (co the mat vai phut)...
-    call npm install -g electron-builder
+    echo [INFO] Cai electron-builder qua pnpm...
+    call pnpm add -g electron-builder
     if %errorlevel% neq 0 (
-        echo [LOI] Khong the cai electron-builder
+        echo [LOI] Khong the cai electron-builder. Chay: pnpm add -g electron-builder
         pause
         exit /b 1
     )

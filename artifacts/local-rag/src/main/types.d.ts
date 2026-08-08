@@ -1,30 +1,36 @@
-// Type declarations for packages without @types
+/**
+ * Type stubs for packages without bundled declarations.
+ */
 
 declare module "pdf-parse" {
-  interface PDFData {
-    text: string;
+  interface PdfData {
     numpages: number;
+    numrender: number;
     info: Record<string, unknown>;
     metadata: Record<string, unknown>;
+    text: string;
     version: string;
   }
   function pdfParse(
-    dataBuffer: Buffer | Uint8Array,
+    dataBuffer: Buffer,
     options?: Record<string, unknown>
-  ): Promise<PDFData>;
+  ): Promise<PdfData>;
   export = pdfParse;
 }
 
 declare module "mammoth" {
-  interface Result {
+  interface ConversionResult {
     value: string;
-    messages: Array<{ type: string; message: string }>;
+    messages: unknown[];
   }
-  interface Input {
+  interface ExtractOptions {
     path?: string;
     buffer?: Buffer;
-    arrayBuffer?: ArrayBuffer;
   }
-  export function extractRawText(input: Input): Promise<Result>;
-  export function convertToHtml(input: Input): Promise<Result>;
+  function extractRawText(options: ExtractOptions): Promise<ConversionResult>;
+  function convertToHtml(
+    options: ExtractOptions,
+    styleMap?: unknown
+  ): Promise<ConversionResult>;
+  export { extractRawText, convertToHtml };
 }

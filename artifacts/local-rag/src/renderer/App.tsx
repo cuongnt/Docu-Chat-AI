@@ -3,7 +3,8 @@ import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import ModelBadge from "./components/ModelBadge";
 import SummaryModal from "./components/SummaryModal";
-import type { Document, ChatMessage, ModelInfo } from "../shared/types";
+import type { AppSettings, Document, ChatMessage, ModelInfo } from "../shared/types";
+
 
 export default function App() {
   const [modelInfo, setModelInfo] = useState<ModelInfo>({ loaded: false });
@@ -15,10 +16,12 @@ export default function App() {
   const [summaryText, setSummaryText] = useState<string>("");
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [importingFiles, setImportingFiles] = useState<Set<string>>(new Set());
+  const [settings, setSettings] = useState<AppSettings>({ semanticSearch: false });
 
-  // Load model info and documents on mount
+  // Load model info, documents, and settings on mount
   useEffect(() => {
     window.electronAPI.getModelInfo().then(setModelInfo);
+    window.electronAPI.getSettings().then(setSettings);
     refreshDocuments();
   }, []);
 
@@ -35,13 +38,13 @@ export default function App() {
       });
     });
 
-    const unsubDone = window.electronAPI.onChatDone((sources) => {
+    const unsubDone = window.electronAPI.onChatDone(({ sources, searchMode }) => {
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (!last || last.role !== "assistant") return prev;
         return [
           ...prev.slice(0, -1),
-          { ...last, isStreaming: false, sources },
+          { ...last, isStreaming: false, sources, searchMode },
         ];
       });
       setIsQuerying(false);
@@ -134,6 +137,16 @@ export default function App() {
     }
   };
 
+  const handleSettingChange = useCallback(
+    async (key: string, value: string) => {
+      await window.electronAPI.setSetting(key, value);
+      // Refresh settings from backend to get canonical state
+      const updated = await window.electronAPI.getSettings();
+      setSettings(updated);
+    },
+    []
+  );
+
   const handleSendMessage = useCallback(
     async (question: string) => {
       if (!modelInfo.loaded) {
@@ -160,9 +173,13 @@ export default function App() {
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsQuerying(true);
 
-      window.electronAPI.sendQuery(question, selectedDocIds);
+      window.electronAPI.sendQuery(
+        question,
+        selectedDocIds,
+        settings.semanticSearch
+      );
     },
-    [modelInfo.loaded, selectedDocIds]
+    [modelInfo.loaded, selectedDocIds, settings.semanticSearch]
   );
 
   const handleCancelQuery = () => {
@@ -229,17 +246,20 @@ export default function App() {
           documents={documents}
           selectedDocIds={selectedDocIds}
           importingFiles={importingFiles}
+          settings={settings}
           onImport={handleImportFiles}
           onDelete={handleDeleteDoc}
           onToggle={handleToggleDoc}
           onSelectAll={handleSelectAll}
           onSummarize={handleSummarize}
+          onSettingChange={handleSettingChange}
         />
         <ChatPanel
           messages={messages}
           isQuerying={isQuerying}
           selectedDocCount={selectedDocIds.length}
           modelLoaded={modelInfo.loaded}
+          semanticSearchEnabled={settings.semanticSearch}
           onSend={handleSendMessage}
           onCancel={handleCancelQuery}
           onClear={handleClearChat}

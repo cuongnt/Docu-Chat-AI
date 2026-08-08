@@ -6,6 +6,7 @@ interface Props {
   isQuerying: boolean;
   selectedDocCount: number;
   modelLoaded: boolean;
+  semanticSearchEnabled: boolean;
   onSend: (question: string) => void;
   onCancel: () => void;
   onClear: () => void;
@@ -16,6 +17,7 @@ export default function ChatPanel({
   isQuerying,
   selectedDocCount,
   modelLoaded,
+  semanticSearchEnabled,
   onSend,
   onCancel,
   onClear,
@@ -49,7 +51,16 @@ export default function ChatPanel({
     ? "Vui lòng chọn mô hình AI trước..."
     : selectedDocCount === 0
     ? "Vui lòng chọn tài liệu trong sidebar..."
+    : semanticSearchEnabled
+    ? "Hỏi về nội dung tài liệu... (tìm kiếm ngữ nghĩa bật)"
     : "Hỏi về nội dung tài liệu... (Enter để gửi)";
+
+  // Show "Ngữ nghĩa" badge only when the last completed response actually used
+  // hybrid retrieval — not just because the toggle is on.
+  const lastAssistantMsg = [...messages]
+    .reverse()
+    .find((m) => m.role === "assistant" && !m.isStreaming);
+  const lastSearchMode = lastAssistantMsg?.searchMode ?? null;
 
   return (
     <div
@@ -82,10 +93,46 @@ export default function ChatPanel({
             flexShrink: 0,
           }}
         >
-          <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-            {selectedDocCount > 0
-              ? `💬 Chat với ${selectedDocCount} tài liệu`
-              : "💬 Hội thoại"}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+              {selectedDocCount > 0
+                ? `💬 Chat với ${selectedDocCount} tài liệu`
+                : "💬 Hội thoại"}
+            </div>
+            {lastSearchMode === "hybrid" && (
+              <div
+                title="Câu trả lời vừa dùng tìm kiếm ngữ nghĩa (BM25 + embedding)"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#7c3aed",
+                  background: "rgba(124,58,237,0.12)",
+                  border: "1px solid rgba(124,58,237,0.3)",
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  letterSpacing: "0.03em",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                🔍 Ngữ nghĩa
+              </div>
+            )}
+            {semanticSearchEnabled && lastSearchMode === "bm25" && messages.some(m => m.role === "assistant" && !m.isStreaming) && (
+              <div
+                title="Tìm kiếm ngữ nghĩa bật nhưng chưa có embedding — dùng BM25. Nhấn 'Tạo embedding tài liệu cũ' trong Cài đặt."
+                style={{
+                  fontSize: 10,
+                  color: "var(--color-text-muted)",
+                  background: "rgba(0,0,0,0.1)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                BM25 (chưa có embedding)
+              </div>
+            )}
           </div>
           {messages.length > 0 && (
             <button

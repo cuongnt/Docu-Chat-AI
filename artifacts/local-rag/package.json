@@ -27,6 +27,7 @@
     "@rollup/rollup-linux-x64-gnu": "*"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.9",
     "@types/react": "^19.1.8",
@@ -38,7 +39,6 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
-    "@tailwindcss/vite": "catalog:",
     "typescript": "~5.9.3",
     "vite": "catalog:"
   },

@@ -1,14 +1,17 @@
-import type { Document } from "../../shared/types";
+import type { AppSettings, Document } from "../../shared/types";
+import SettingsPanel from "./SettingsPanel";
 
 interface Props {
   documents: Document[];
   selectedDocIds: number[];
   importingFiles: Set<string>;
+  settings: AppSettings;
   onImport: () => void;
   onDelete: (id: number) => void;
   onToggle: (id: number) => void;
   onSelectAll: () => void;
   onSummarize: (doc: Document) => void;
+  onSettingChange: (key: string, value: string) => Promise<void>;
 }
 
 const FILE_ICONS: Record<string, string> = {
@@ -43,11 +46,13 @@ export default function Sidebar({
   documents,
   selectedDocIds,
   importingFiles,
+  settings,
   onImport,
   onDelete,
   onToggle,
   onSelectAll,
   onSummarize,
+  onSettingChange,
 }: Props) {
   const allSelected =
     documents.length > 0 && selectedDocIds.length === documents.length;
@@ -198,20 +203,24 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Footer */}
+      {/* Active documents footer */}
       {selectedDocIds.length > 0 && (
         <div
           style={{
-            padding: "10px 14px",
+            padding: "8px 14px",
             borderTop: "1px solid var(--color-border)",
             fontSize: 12,
             color: "var(--color-accent)",
             fontWeight: 500,
+            flexShrink: 0,
           }}
         >
           ✓ {selectedDocIds.length} tài liệu đang được dùng để chat
         </div>
       )}
+
+      {/* Settings panel pinned at bottom */}
+      <SettingsPanel settings={settings} onSettingChange={onSettingChange} />
     </aside>
   );
 }
