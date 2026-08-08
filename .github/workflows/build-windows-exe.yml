@@ -26,8 +26,9 @@ jobs:
           version: 10
 
       - name: Install dependencies
-        run: pnpm install --ignore-scripts
-        # ignore-scripts để tránh lỗi trên CI; sẽ rebuild thủ công bên dưới
+        run: pnpm install --ignore-scripts --no-frozen-lockfile
+        # --no-frozen-lockfile: lockfile tạo trên Linux thiếu Windows-specific optional deps
+        # (e.g. @rollup/rollup-win32-x64-msvc), cần cho pnpm tự resolve lại trên Windows
 
       - name: Rebuild native modules for Electron
         working-directory: artifacts/local-rag
