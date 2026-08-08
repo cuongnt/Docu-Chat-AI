@@ -1,0 +1,67 @@
+{
+  "name": "@workspace/local-rag",
+  "version": "1.0.0",
+  "description": "Ứng dụng RAG local - chat với tài liệu không cần internet",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev:renderer": "vite --config vite.renderer.config.ts",
+    "dev:main": "npx tsc -p tsconfig.main.json && npx tsc -p tsconfig.preload.json",
+    "build": "pnpm build:renderer && pnpm build:main && pnpm build:preload",
+    "build:renderer": "vite build --config vite.renderer.config.ts",
+    "build:main": "npx tsc -p tsconfig.main.json",
+    "build:preload": "npx tsc -p tsconfig.preload.json",
+    "dist": "pnpm build && npx electron-builder --win",
+    "dist:dir": "pnpm build && npx electron-builder --win --dir",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.6.0",
+    "mammoth": "^1.9.0",
+    "node-llama-cpp": "^3.6.0",
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.19.9",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "catalog:",
+    "concurrently": "^9.1.0",
+    "electron": "^33.4.0",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "typescript": "~5.9.3",
+    "vite": "catalog:"
+  },
+  "build": {
+    "appId": "com.localrag.docchat",
+    "productName": "DocChat AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/node-llama-cpp/**/*"
+    ],
+    "npmRebuild": true,
+    "nodeGypRebuild": false
+  }
+}

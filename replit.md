@@ -1,44 +1,51 @@
-# [Project name]
+# DocChat AI
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Ứng dụng desktop Windows chạy hoàn toàn offline — cho phép người dùng import tài liệu (PDF, DOCX, TXT, XLSX) và chat với AI trong phạm vi nội dung tài liệu đó, không cần kết nối internet.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+**Quan trọng:** Đây là Electron desktop app — không chạy được trên Replit. Phải clone và build trên **Windows**.
+
+- `pnpm --filter @workspace/local-rag run typecheck` — kiểm tra TypeScript (chạy được trên Replit)
+- Trên Windows: `cd artifacts/local-rag && pnpm install && pnpm dist` — build file .exe
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js 20+, TypeScript 5.9
+- Desktop: Electron 33 + React 19 + Vite 7
+- AI inference: node-llama-cpp v3 (chạy file GGUF local)
+- Retrieval: BM25 (100% offline, pure JS)
+- Storage: better-sqlite3 (SQLite local)
+- Doc parsing: pdf-parse, mammoth, xlsx
+- UI: Tailwind CSS v4 (dark theme)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/local-rag/` — toàn bộ Electron app
+  - `src/main/` — Electron main process (Node.js)
+  - `src/preload/` — contextBridge security layer
+  - `src/renderer/` — React frontend
+  - `src/shared/types.ts` — TypeScript types dùng chung
+  - `README.md` — hướng dẫn build Windows đầy đủ
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **BM25 thay vì vector embeddings**: 100% offline không cần tải embedding model, nhanh hơn, tiết kiệm RAM cho LLM
+- **CommonJS cho main process**: Tương thích tốt hơn với native modules (better-sqlite3, node-llama-cpp)
+- **dynamic import() cho native modules**: Tránh lỗi khởi động, load lazy khi cần
+- **Streaming qua IPC events**: Dùng `ipcRenderer.on('chat:chunk')` pattern thay vì invoke để stream tokens
+- **asarUnpack cho native modules**: electron-builder cần unpack better-sqlite3 và node-llama-cpp khỏi asar archive
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Giao diện và UI text hoàn toàn bằng tiếng Việt
+- Dark theme (màu nền #1a1b1e, accent tím #7c3aed)
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `electron-builder` không thể install trên Replit (dependency `tar` bị firewall chặn) — phải cài trên Windows
+- `node-llama-cpp` cần Visual Studio Build Tools 2019/2022 với C++ workload để biên dịch
+- `minimumReleaseAge: 1440` trong pnpm-workspace.yaml có thể chặn package mới — dùng version ổn định
 
 ## Pointers
 

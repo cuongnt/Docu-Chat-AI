@@ -1,0 +1,45 @@
+{
+  appId: "com.localrag.docchat",
+  productName: "DocChat AI",
+  copyright: "Copyright © 2024",
+  directories: {
+    output: "release",
+    buildResources: "assets"
+  },
+  files: [
+    "dist/**/*",
+    "!dist/**/*.map"
+  ],
+  extraResources: [],
+  win: {
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64"]
+      }
+    ],
+    icon: "assets/icon.ico",
+    requestedExecutionLevel: "asInvoker"
+  },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowElevation: true,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "DocChat AI",
+    installerIcon: "assets/icon.ico",
+    uninstallerIcon: "assets/icon.ico",
+    installerHeaderIcon: "assets/icon.ico",
+    license: "LICENSE"
+  },
+  asar: true,
+  asarUnpack: [
+    "node_modules/better-sqlite3/**/*",
+    "node_modules/node-llama-cpp/**/*"
+  ],
+  npmRebuild: true,
+  nodeGypRebuild: false,
+  publish: null
+}
