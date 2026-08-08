@@ -58,6 +58,23 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '0'
         continue-on-error: true  # electron-builder sẽ tự rebuild nếu bước này fail
 
+      - name: Patch better-sqlite3 binding.gyp (c++17 → c++20 for Electron 33)
+        shell: pwsh
+        run: |
+          # electron-builder's bundled node-gyp passes /std:c++17 which overrides
+          # better-sqlite3's own c++20 setting — Electron 33 headers require C++20.
+          # Patch the binding.gyp directly to remove the conflicting c++17 flag.
+          $gyp = "node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/binding.gyp"
+          if (Test-Path $gyp) {
+            $content = Get-Content $gyp -Raw
+            $content = $content -replace "'std': 'c\+\+17'", "'std': 'c++20'"
+            $content = $content -replace '"std": "c\+\+17"', '"std": "c++20"'
+            Set-Content $gyp $content
+            Write-Host "Patched better-sqlite3/binding.gyp: c++17 -> c++20"
+          } else {
+            Write-Host "WARNING: binding.gyp not found at expected path"
+          }
+
       - name: Build app
         working-directory: artifacts/local-rag
         run: pnpm build
