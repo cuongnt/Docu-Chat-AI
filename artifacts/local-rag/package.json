@@ -65,7 +65,7 @@
       "node_modules/better-sqlite3/**/*",
       "node_modules/node-llama-cpp/**/*"
     ],
-    "npmRebuild": true,
+    "npmRebuild": false,
     "nodeGypRebuild": false
   }
 }
