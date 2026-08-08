@@ -31,15 +31,22 @@ jobs:
         with:
           version: 10
 
-      - name: Install workspace-level dependencies (pnpm)
-        run: pnpm install --ignore-scripts --no-frozen-lockfile
+      - name: Remove Linux-only platform overrides from pnpm-workspace.yaml
+        shell: pwsh
+        run: |
+          # pnpm-workspace.yaml excludes all Windows binaries (optimized for Replit/Linux).
+          # On Windows CI we need them, so strip those override lines before installing.
+          $content = Get-Content pnpm-workspace.yaml -Raw
+          # Remove lines that set Windows/non-Linux platform packages to "-"
+          $content = $content -replace '(?m)^\s*"esbuild>@esbuild/win32[^"]*":\s*["''-]+\r?\n', ''
+          $content = $content -replace '(?m)^\s*"rollup>@rollup/rollup-win32[^"]*":\s*["''-]+\r?\n', ''
+          $content = $content -replace '(?m)^\s*"@tailwindcss/oxide>@tailwindcss/oxide-win32[^"]*":\s*["''-]+\r?\n', ''
+          $content = $content -replace '(?m)^\s*"lightningcss>lightningcss-win32[^"]*":\s*["''-]+\r?\n', ''
+          Set-Content pnpm-workspace.yaml $content
+          Write-Host "Patched pnpm-workspace.yaml — Windows platform overrides removed"
 
-      - name: Install local-rag dependencies (npm)
-        working-directory: artifacts/local-rag
-        run: npm install --ignore-scripts
-        # Dùng npm thay pnpm để tránh pnpm-workspace.yaml overrides
-        # (chúng xóa @esbuild/win32-x64, @rollup/rollup-win32-x64-msvc, v.v.
-        #  khỏi toàn bộ workspace vì workspace được tối ưu cho Linux)
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts --no-frozen-lockfile
 
       - name: Rebuild native modules for Electron
         working-directory: artifacts/local-rag
