@@ -31,13 +31,15 @@ jobs:
         with:
           version: 10
 
-      - name: Install dependencies
-        shell: pwsh
-        run: |
-          # Xóa lockfile Linux để pnpm tạo lại với Windows optional deps
-          # (e.g. @rollup/rollup-win32-x64-msvc)
-          if (Test-Path pnpm-lock.yaml) { Remove-Item pnpm-lock.yaml }
-          pnpm install --ignore-scripts
+      - name: Install workspace-level dependencies (pnpm)
+        run: pnpm install --ignore-scripts --no-frozen-lockfile
+
+      - name: Install local-rag dependencies (npm)
+        working-directory: artifacts/local-rag
+        run: npm install --ignore-scripts
+        # Dùng npm thay pnpm để tránh pnpm-workspace.yaml overrides
+        # (chúng xóa @esbuild/win32-x64, @rollup/rollup-win32-x64-msvc, v.v.
+        #  khỏi toàn bộ workspace vì workspace được tối ưu cho Linux)
 
       - name: Rebuild native modules for Electron
         working-directory: artifacts/local-rag
