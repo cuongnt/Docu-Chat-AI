@@ -10,7 +10,9 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
+    # windows-latest hiện dùng VS 2026 (version 18) - node-gyp chưa nhận ra
+    # windows-2022 có VS 2022 (version 17) được node-gyp hỗ trợ đầy đủ
 
     steps:
       - name: Checkout code
@@ -45,6 +47,7 @@ jobs:
         env:
           npm_config_msvs_version: '2022'
           ELECTRON_SKIP_BINARY_DOWNLOAD: '0'
+        continue-on-error: true  # electron-builder sẽ tự rebuild nếu bước này fail
 
       - name: Build app
         working-directory: artifacts/local-rag
