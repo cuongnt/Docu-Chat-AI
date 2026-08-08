@@ -1,0 +1,47 @@
+Run npm install -g electron-builder
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated rimraf@2.6.3: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+
+added 277 packages in 54s
+
+47 packages are looking for funding
+  run `npm fund` for details
+  • electron-builder  version=26.15.3 os=10.0.20348
+  • loaded configuration  file=package.json ("build" field)
+  • author is missed in the package.json  appPackageFile=D:\a\Docu-Chat-AI\Docu-Chat-AI\artifacts\local-rag\package.json
+  • packageManager not detected by file, falling back to environment detection  resolvedPackageManager=npm detected=D:\a\Docu-Chat-AI\Docu-Chat-AI\artifacts\local-rag
+  • executing @electron/rebuild  electronVersion=33.4.11 arch=x64 buildFromSource=false workspaceRoot=D:\a\Docu-Chat-AI\Docu-Chat-AI\artifacts\local-rag projectDir=./ appDir=./
+  • installing native dependencies  arch=x64
+  • preparing       moduleName=better-sqlite3 arch=x64
+  ⨯ 
+
+  copy_builtin_sqlite3
+  sqlite3.c
+  win_delay_load_hook.cc
+  sqlite3.vcxproj -> D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3\build\Release\\sqlite3.lib
+cl : command line  warning D9025: overriding '/std:c++20' with '/std:c++17' [D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3\build\better_sqlite3.vcxproj]
+  better_sqlite3.cpp
+C:\Users\runneradmin\.electron-gyp\33.4.11\include\node\v8config.h(13,1): error C1189: #error:  "C++20 or later required." [D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3\build\better_sqlite3.vcxproj]
+  (compiling source file '../src/better_sqlite3.cpp')
+  
+  test_extension.c
+  win_delay_load_hook.cc
+     Creating library D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3\build\Release\test_extension.lib and object D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3\build\Release\test_extension.exp
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 3 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  test_extension.vcxproj -> D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3\build\Release\\test_extension.node
+Error: `C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe` failed with exit code: 1
+    at ChildProcess.<anonymous> (C:\npm\prefix\node_modules\electron-builder\node_modules\node-gyp\lib\build.js:219:23)
+    at ChildProcess.emit (node:events:519:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+
+
+  ⨯ node-gyp failed to rebuild 'D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3'  failedTask=build stackTrace=Error: node-gyp failed to rebuild 'D:\a\Docu-Chat-AI\Docu-Chat-AI\node_modules\.pnpm\better-sqlite3@9.6.0\node_modules\better-sqlite3'
+    at ChildProcess.<anonymous> (file:///C:/npm/prefix/node_modules/electron-builder/node_modules/@electron/rebuild/lib/module-type/node-gyp/node-gyp.js:120:24)
+    at ChildProcess.emit (node:events:519:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+Error: Process completed with exit code 1.
