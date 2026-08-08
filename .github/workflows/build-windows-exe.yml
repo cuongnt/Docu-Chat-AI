@@ -1,0 +1,64 @@
+name: Build Windows .exe
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'artifacts/local-rag/**'
+  workflow_dispatch:  # Cho phép chạy thủ công từ GitHub Actions tab
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+        # ignore-scripts để tránh lỗi trên CI; sẽ rebuild thủ công bên dưới
+
+      - name: Rebuild native modules for Electron
+        working-directory: artifacts/local-rag
+        run: |
+          npx electron-rebuild -f -w better-sqlite3
+        env:
+          npm_config_msvs_version: '2022'
+        continue-on-error: true  # node-llama-cpp rebuild tốn thời gian, có thể bỏ qua
+
+      - name: Build app
+        working-directory: artifacts/local-rag
+        run: pnpm build
+
+      - name: Package as Windows installer
+        working-directory: artifacts/local-rag
+        run: |
+          npm install -g electron-builder
+          electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .exe installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocChatAI-Windows-Installer
+          path: artifacts/local-rag/release/*.exe
+          if-no-files-found: warn
+
+      - name: Upload portable folder (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocChatAI-Windows-Portable
+          path: artifacts/local-rag/release/win-unpacked/
+          if-no-files-found: warn
