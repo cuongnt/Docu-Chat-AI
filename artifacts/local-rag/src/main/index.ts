@@ -182,7 +182,8 @@ ipcMain.on(
       docIds,
       (chunk) => event.sender.send("chat:chunk", chunk),
       (sources) => {
-        event.sender.send("chat:done", sources);
+        // sources is SourceChunk[] — serialize to plain object for IPC
+        event.sender.send("chat:done", JSON.parse(JSON.stringify(sources)));
         currentQueryController = null;
       },
       (err) => {

@@ -7,11 +7,18 @@ export interface Document {
   createdAt: string;
 }
 
+export interface SourceChunk {
+  id: number;
+  docId: number;
+  content: string;
+  label: string; // e.g. "Đoạn 1"
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: string[];
+  sources?: SourceChunk[];
   isStreaming?: boolean;
 }
 
@@ -52,7 +59,7 @@ export interface ElectronAPI {
   // Chat
   sendQuery(question: string, docIds: number[]): void;
   onChatChunk(callback: (chunk: string) => void): () => void;
-  onChatDone(callback: (sources: string[]) => void): () => void;
+  onChatDone(callback: (sources: SourceChunk[]) => void): () => void;
   onChatError(callback: (error: string) => void): () => void;
   cancelQuery(): void;
 }

@@ -2,6 +2,7 @@ import { getDb, getAllChunksForDocs, getChunks } from "./db";
 import { buildCorpus, search } from "./bm25";
 import { generateText, streamInference } from "./llm";
 import type { StreamController } from "./llm";
+import type { SourceChunk } from "../shared/types";
 
 const RAG_SYSTEM_PROMPT = `Bạn là trợ lý AI thông minh, chuyên phân tích và trả lời câu hỏi dựa trên tài liệu được cung cấp.
 
@@ -20,7 +21,7 @@ export async function queryRag(
   question: string,
   docIds: number[],
   onChunk: (chunk: string) => void,
-  onDone: (sources: string[]) => void,
+  onDone: (sources: SourceChunk[]) => void,
   onError: (err: string) => void
 ): Promise<StreamController> {
   const db = getDb();
@@ -52,7 +53,12 @@ CÂU HỎI: ${question}
 
 Hãy trả lời câu hỏi dựa trên tài liệu tham khảo trên:`;
 
-  const sources = relevant.map((r) => `Đoạn ${r.id} (tài liệu #${r.docId})`);
+  const sources: SourceChunk[] = relevant.map((r, i) => ({
+    id: r.id,
+    docId: r.docId,
+    content: r.content,
+    label: `Đoạn ${i + 1}`,
+  }));
 
   const ctrl = await streamInference(
     prompt,

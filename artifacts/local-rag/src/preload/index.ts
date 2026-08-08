@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { ElectronAPI } from "../shared/types";
+import type { ElectronAPI, SourceChunk } from "../shared/types";
 
 const api: ElectronAPI = {
   // Model
@@ -26,7 +26,7 @@ const api: ElectronAPI = {
     return () => ipcRenderer.removeListener("chat:chunk", handler);
   },
   onChatDone: (callback) => {
-    const handler = (_: Electron.IpcRendererEvent, sources: string[]) =>
+    const handler = (_: Electron.IpcRendererEvent, sources: SourceChunk[]) =>
       callback(sources);
     ipcRenderer.on("chat:done", handler);
     return () => ipcRenderer.removeListener("chat:done", handler);
