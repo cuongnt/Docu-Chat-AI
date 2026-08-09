@@ -46,21 +46,24 @@ jobs:
           Write-Host "Patched pnpm-workspace.yaml — Windows platform overrides removed"
 
       - name: Install dependencies
-        run: pnpm install --ignore-scripts --no-frozen-lockfile
+        # Do NOT use --ignore-scripts: node-llama-cpp runs postInstall.js to download
+        # its pre-built llama.cpp binaries. Skipping that script causes NoBinaryFoundError.
+        run: pnpm install --no-frozen-lockfile
+        env:
+          npm_config_msvs_version: '2022'
 
-      - name: Download prebuilt better-sqlite3 for Electron 33
+      - name: Overwrite better-sqlite3 with Electron 33 prebuilt
         shell: pwsh
+        # pnpm install runs better-sqlite3's install script which grabs the Node.js prebuilt.
+        # We need the Electron 33 prebuilt instead. Re-run prebuild-install with correct flags.
         run: |
-          # better-sqlite3 v11+ has prebuilt binaries for Electron 33.
-          # Run prebuild-install from the pnpm virtual store path.
-          # npmRebuild=false in package.json prevents electron-builder from recompiling.
           $pkg = Get-ChildItem "node_modules/.pnpm" -Directory -Filter "better-sqlite3@*" | Select-Object -First 1
           if ($pkg) {
             $path = Join-Path $pkg.FullName "node_modules/better-sqlite3"
-            Write-Host "Found better-sqlite3 at: $path"
+            Write-Host "Replacing better-sqlite3 binary with Electron 33 prebuilt from: $path"
             cd $path
             npx prebuild-install --runtime electron --target 33.4.11 --arch x64
-            Write-Host "prebuild-install completed"
+            Write-Host "Done"
           } else {
             Write-Host "WARNING: better-sqlite3 not found in pnpm store"
           }
