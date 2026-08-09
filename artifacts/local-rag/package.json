@@ -34,7 +34,7 @@
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "catalog:",
     "concurrently": "^9.1.0",
-    "electron": "^33.4.0",
+    "electron": "33.4.11",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

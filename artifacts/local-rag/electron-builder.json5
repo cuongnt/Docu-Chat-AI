@@ -2,6 +2,9 @@
   appId: "com.localrag.docchat",
   productName: "DocChat AI",
   copyright: "Copyright © 2024",
+  // Pin exact version so electron-builder can download platform binaries
+  // even when electron devDep is not installed (e.g. after pnpm deploy)
+  electronVersion: "33.4.11",
   directories: {
     output: "release",
     buildResources: "assets"
