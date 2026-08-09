@@ -65,8 +65,10 @@ export default function SettingsPanel({ settings, onSettingChange }: Props) {
     const s = await window.electronAPI.getEmbeddingStatus();
     setEmbStatus(s);
 
+    // If binary not found or model failed, auto-disable semantic search so
+    // the user can still use the app with BM25 search.
     if (!res.success) {
-      alert(`Không thể tải mô hình embedding:\n${res.error}`);
+      onSettingChange("semanticSearch", "false");
     }
   };
 
@@ -148,56 +150,58 @@ export default function SettingsPanel({ settings, onSettingChange }: Props) {
           <EmbStatusRow status={embStatus} isLoading={isLoading} />
 
           {/* Actions */}
-          <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-            {embStatus.status !== "loading" && !isLoading && (
-              <button
-                onClick={handlePickEmbeddingModel}
-                style={actionBtnStyle("var(--color-accent)")}
-                title="Chọn file GGUF embedding (ví dụ: nomic-embed-text, all-minilm)"
-              >
-                {embStatus.status === "ready" ? "🔄 Đổi model" : "📂 Chọn model embedding"}
-              </button>
-            )}
-
-            {embStatus.status === "ready" && (
-              <>
-                {isReembedding ? (
-                  <div style={{ color: "var(--color-text-muted)", width: "100%" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <MiniSpinner />
-                      <span>
-                        Đang tạo embedding... ({reembedProgress?.done ?? 0}/
-                        {reembedProgress?.total ?? "?"})
-                      </span>
-                    </div>
-                    <ProgressBar pct={reembedProgress?.pct ?? 0} />
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleReembed}
-                    style={actionBtnStyle("var(--color-accent)")}
-                    title="Tạo lại embedding cho tất cả tài liệu"
-                  >
-                    ✦ Tạo embedding tài liệu cũ
-                  </button>
-                )}
+          {embStatus.status !== "error" && (
+            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+              {embStatus.status !== "loading" && !isLoading && (
                 <button
-                  onClick={handleUnload}
-                  style={actionBtnStyle("var(--color-error)")}
-                  title="Bỏ tải mô hình embedding"
+                  onClick={handlePickEmbeddingModel}
+                  style={actionBtnStyle("var(--color-accent)")}
+                  title="Chọn file GGUF embedding (ví dụ: nomic-embed-text, all-minilm)"
                 >
-                  Bỏ tải
+                  {embStatus.status === "ready" ? "🔄 Đổi model" : "📂 Chọn model embedding"}
                 </button>
-              </>
-            )}
-          </div>
+              )}
+
+              {embStatus.status === "ready" && (
+                <>
+                  {isReembedding ? (
+                    <div style={{ color: "var(--color-text-muted)", width: "100%" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <MiniSpinner />
+                        <span>
+                          Đang tạo embedding... ({reembedProgress?.done ?? 0}/
+                          {reembedProgress?.total ?? "?"})
+                        </span>
+                      </div>
+                      <ProgressBar pct={reembedProgress?.pct ?? 0} />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleReembed}
+                      style={actionBtnStyle("var(--color-accent)")}
+                      title="Tạo lại embedding cho tất cả tài liệu"
+                    >
+                      ✦ Tạo embedding tài liệu cũ
+                    </button>
+                  )}
+                  <button
+                    onClick={handleUnload}
+                    style={actionBtnStyle("var(--color-error)")}
+                    title="Bỏ tải mô hình embedding"
+                  >
+                    Bỏ tải
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           <div
             style={{
@@ -206,7 +210,9 @@ export default function SettingsPanel({ settings, onSettingChange }: Props) {
               marginTop: 6,
             }}
           >
-            Dùng file GGUF embedding: nomic-embed-text, all-minilm, mxbai-embed...
+            {embStatus.status === "error"
+              ? "⚠ Không thể tải mô hình — tính năng này đã tắt. App vẫn hoạt động bình thường với tìm kiếm BM25."
+              : "Dùng file GGUF embedding: nomic-embed-text, all-minilm, mxbai-embed..."}
           </div>
         </div>
       )}
