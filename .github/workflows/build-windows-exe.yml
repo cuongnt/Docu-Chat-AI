@@ -66,16 +66,6 @@ jobs:
           }
         continue-on-error: true
 
-      - name: Download node-llama-cpp pre-built binaries for Windows
-        working-directory: artifacts/local-rag
-        run: |
-          # --ignore-scripts skips node-llama-cpp's postinstall which downloads its llama.cpp
-          # native binaries. Run the download manually so binaries are present before packaging.
-          npx --yes node-llama-cpp download --no-progress
-        env:
-          # Ensure only CPU build is downloaded (no CUDA/Vulkan — keeps size small)
-          NODE_LLAMA_CPP_GPU: false
-
       - name: Build app
         working-directory: artifacts/local-rag
         run: pnpm build

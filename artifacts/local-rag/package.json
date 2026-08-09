@@ -60,11 +60,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
-    "asar": true,
-    "asarUnpack": [
-      "node_modules/better-sqlite3/**/*",
-      "node_modules/node-llama-cpp/**/*"
-    ],
+    "asar": false,
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "publish": null
