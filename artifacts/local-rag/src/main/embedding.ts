@@ -6,6 +6,12 @@
 
 import path from "path";
 
+// node-llama-cpp is ESM-only; bypass TypeScript's require() conversion (same fix as llm.ts)
+async function importLlamaCpp(): Promise<typeof import("node-llama-cpp")> {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  return new Function('return import("node-llama-cpp")')();
+}
+
 export type EmbeddingStatus = "idle" | "loading" | "ready" | "error";
 
 export interface EmbeddingState {
@@ -46,7 +52,7 @@ export async function loadEmbeddingModel(
   state.error = "";
 
   try {
-    const { getLlama } = await import("node-llama-cpp");
+    const { getLlama } = await importLlamaCpp();
     llamaEmbInstance = await getLlama();
     embeddingModel = await llamaEmbInstance.loadModel({ modelPath });
     embeddingContext = await embeddingModel.createEmbeddingContext();
