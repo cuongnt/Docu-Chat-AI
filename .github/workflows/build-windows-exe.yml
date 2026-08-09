@@ -6,13 +6,11 @@ on:
     paths:
       - 'artifacts/local-rag/**'
       - '.github/workflows/build-windows-exe.yml'
-  workflow_dispatch:  # Cho phép chạy thủ công từ GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-2022
-    # windows-latest hiện dùng VS 2026 (version 18) — node-gyp chưa nhận ra
-    # windows-2022 có VS 2022 (version 17) được node-gyp hỗ trợ đầy đủ
 
     steps:
       - name: Checkout code
@@ -34,8 +32,6 @@ jobs:
       - name: Remove Linux-only platform overrides from pnpm-workspace.yaml
         shell: pwsh
         run: |
-          # pnpm-workspace.yaml excludes Windows binaries (optimised for Replit/Linux).
-          # Strip those override lines before installing so Windows packages resolve.
           $content = Get-Content pnpm-workspace.yaml -Raw
           $content = $content -replace '(?m)^\s*"esbuild>@esbuild/win32[^"]*":\s*["''-]+\r?\n', ''
           $content = $content -replace '(?m)^\s*"rollup>@rollup/rollup-win32[^"]*":\s*["''-]+\r?\n', ''
@@ -44,9 +40,7 @@ jobs:
           Set-Content pnpm-workspace.yaml $content
           Write-Host "Patched pnpm-workspace.yaml"
 
-      - name: Install dependencies (with scripts so node-llama-cpp downloads its binary)
-        # Do NOT use --ignore-scripts: node-llama-cpp's postInstall downloads
-        # the pre-built llama.cpp binary. Skipping it causes NoBinaryFoundError.
+      - name: Install dependencies (scripts enabled so node-llama-cpp downloads binary)
         run: pnpm install --no-frozen-lockfile
         env:
           npm_config_msvs_version: '2022'
@@ -55,50 +49,50 @@ jobs:
         working-directory: artifacts/local-rag
         run: pnpm build
 
-      - name: Flatten pnpm symlinks with pnpm deploy
+      - name: Flatten pnpm junctions into real files for electron-builder
         shell: pwsh
         run: |
-          # ROOT CAUSE FIX: pnpm workspace uses symlinks pointing to the virtual
-          # store (.pnpm). electron-builder cannot reliably follow these symlinks,
-          # so native binaries (node-llama-cpp/bins, better-sqlite3) are missing
-          # from the packaged app → NoBinaryFoundError at runtime.
+          # pnpm creates Windows junctions (like symlinks) in node_modules that
+          # point to the virtual store (.pnpm). electron-builder does not reliably
+          # follow junctions, so native binaries are missing → NoBinaryFoundError.
           #
-          # `pnpm deploy` creates a portable, flat node_modules tree (real files,
-          # no symlinks) and re-runs lifecycle scripts (so node-llama-cpp downloads
-          # its Windows binary into the deploy directory).
-          Write-Host "Running pnpm deploy to create flat node_modules..."
-          pnpm --filter @workspace/local-rag deploy --legacy ./deploy-prod
-          Write-Host "pnpm deploy done"
+          # PowerShell Copy-Item DOES follow junctions and hardlinks, producing
+          # a real directory tree with actual files that electron-builder can read.
+          $src  = "artifacts\local-rag\node_modules"
+          $flat = "artifacts\local-rag\node_modules_flat"
 
-          # Verify node-llama-cpp binary was downloaded
-          $binsDir = "deploy-prod/node_modules/node-llama-cpp"
-          if (Test-Path $binsDir) {
-            Write-Host "node-llama-cpp contents:"
-            Get-ChildItem $binsDir | ForEach-Object { Write-Host "  $($_.Name)" }
-            $bins = Join-Path $binsDir "bins"
-            if (Test-Path $bins) {
-              Write-Host "node-llama-cpp/bins:"
-              Get-ChildItem $bins -Recurse | ForEach-Object { Write-Host "  $($_.FullName)" }
-            } else {
-              Write-Host "WARNING: bins/ not found inside node-llama-cpp"
-            }
-          } else {
-            Write-Host "WARNING: node-llama-cpp not found in deploy-prod"
+          Write-Host "Copying node_modules (following junctions to real files)..."
+          Copy-Item -Path $src -Destination $flat -Recurse -Force
+          Write-Host "Copy done"
+
+          # Verify critical packages are present
+          foreach ($pkg in @("better-sqlite3", "node-llama-cpp", "mammoth", "xlsx", "pdf-parse")) {
+            $p = Join-Path $flat $pkg
+            if (Test-Path $p) { Write-Host "  ✓ $pkg" }
+            else               { Write-Host "  ✗ $pkg MISSING" }
           }
 
-          # Replace the symlinked node_modules with the flat deployed version
-          Remove-Item -Recurse -Force "artifacts/local-rag/node_modules" -ErrorAction SilentlyContinue
-          Move-Item "deploy-prod/node_modules" "artifacts/local-rag/node_modules"
-          Write-Host "Replaced symlinked node_modules with flat node_modules"
+          # Check node-llama-cpp bins (the native llama.cpp binary)
+          $binsDir = Join-Path $flat "node-llama-cpp\bins"
+          if (Test-Path $binsDir) {
+            Write-Host "node-llama-cpp/bins:"
+            Get-ChildItem $binsDir -Recurse | Select-Object -ExpandProperty FullName |
+              ForEach-Object { Write-Host "  $_" }
+          } else {
+            Write-Host "WARNING: node-llama-cpp/bins not found — binary may be missing"
+          }
+
+          # Swap: replace junction-based node_modules with flat real-file version
+          Remove-Item -Recurse -Force $src
+          Rename-Item $flat "node_modules"
+          Write-Host "Replaced node_modules with flat version"
 
       - name: Overwrite better-sqlite3 with Electron 33 prebuilt
         shell: pwsh
-        # pnpm deploy runs better-sqlite3's install which grabs the Node.js prebuilt.
-        # We need the Electron 33 prebuilt instead.
         run: |
-          $bsqlPath = "artifacts/local-rag/node_modules/better-sqlite3"
+          $bsqlPath = "artifacts\local-rag\node_modules\better-sqlite3"
           if (Test-Path $bsqlPath) {
-            Write-Host "Installing Electron 33 prebuilt for better-sqlite3 at: $bsqlPath"
+            Write-Host "Installing Electron 33 prebuilt for better-sqlite3"
             Push-Location $bsqlPath
             npx prebuild-install --runtime electron --target 33.4.11 --arch x64
             Pop-Location
