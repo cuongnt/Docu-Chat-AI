@@ -66,6 +66,7 @@
       "node_modules/node-llama-cpp/**/*"
     ],
     "npmRebuild": false,
-    "nodeGypRebuild": false
+    "nodeGypRebuild": false,
+    "publish": null
   }
 }

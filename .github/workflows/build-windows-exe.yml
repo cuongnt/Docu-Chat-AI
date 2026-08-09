@@ -83,6 +83,7 @@ jobs:
           npm_config_node_gyp_force_process_config: 'true'
 
       - name: Upload .exe installer
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: DocChatAI-Windows-Installer
@@ -90,6 +91,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload portable folder (backup)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: DocChatAI-Windows-Portable
