@@ -7,7 +7,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "dist/preload",
+    "outDir": "dist",
     "rootDir": "src"
   },
   "include": ["src/preload/**/*", "src/shared/**/*"]
