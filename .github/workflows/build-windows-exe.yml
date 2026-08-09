@@ -67,7 +67,7 @@ jobs:
           # no symlinks) and re-runs lifecycle scripts (so node-llama-cpp downloads
           # its Windows binary into the deploy directory).
           Write-Host "Running pnpm deploy to create flat node_modules..."
-          pnpm --filter @workspace/local-rag deploy ./deploy-prod
+          pnpm --filter @workspace/local-rag deploy --legacy ./deploy-prod
           Write-Host "pnpm deploy done"
 
           # Verify node-llama-cpp binary was downloaded
