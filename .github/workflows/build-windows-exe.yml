@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: windows-2022
-    # windows-latest hiện dùng VS 2026 (version 18) - node-gyp chưa nhận ra
+    # windows-latest hiện dùng VS 2026 (version 18) — node-gyp chưa nhận ra
     # windows-2022 có VS 2022 (version 17) được node-gyp hỗ trợ đầy đủ
 
     steps:
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Setup MSBuild (Visual Studio Build Tools)
+      - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Install pnpm
@@ -34,44 +34,79 @@ jobs:
       - name: Remove Linux-only platform overrides from pnpm-workspace.yaml
         shell: pwsh
         run: |
-          # pnpm-workspace.yaml excludes all Windows binaries (optimized for Replit/Linux).
-          # On Windows CI we need them, so strip those override lines before installing.
+          # pnpm-workspace.yaml excludes Windows binaries (optimised for Replit/Linux).
+          # Strip those override lines before installing so Windows packages resolve.
           $content = Get-Content pnpm-workspace.yaml -Raw
-          # Remove lines that set Windows/non-Linux platform packages to "-"
           $content = $content -replace '(?m)^\s*"esbuild>@esbuild/win32[^"]*":\s*["''-]+\r?\n', ''
           $content = $content -replace '(?m)^\s*"rollup>@rollup/rollup-win32[^"]*":\s*["''-]+\r?\n', ''
           $content = $content -replace '(?m)^\s*"@tailwindcss/oxide>@tailwindcss/oxide-win32[^"]*":\s*["''-]+\r?\n', ''
           $content = $content -replace '(?m)^\s*"lightningcss>lightningcss-win32[^"]*":\s*["''-]+\r?\n', ''
           Set-Content pnpm-workspace.yaml $content
-          Write-Host "Patched pnpm-workspace.yaml — Windows platform overrides removed"
+          Write-Host "Patched pnpm-workspace.yaml"
 
-      - name: Install dependencies
-        # Do NOT use --ignore-scripts: node-llama-cpp runs postInstall.js to download
-        # its pre-built llama.cpp binaries. Skipping that script causes NoBinaryFoundError.
+      - name: Install dependencies (with scripts so node-llama-cpp downloads its binary)
+        # Do NOT use --ignore-scripts: node-llama-cpp's postInstall downloads
+        # the pre-built llama.cpp binary. Skipping it causes NoBinaryFoundError.
         run: pnpm install --no-frozen-lockfile
         env:
           npm_config_msvs_version: '2022'
 
-      - name: Overwrite better-sqlite3 with Electron 33 prebuilt
-        shell: pwsh
-        # pnpm install runs better-sqlite3's install script which grabs the Node.js prebuilt.
-        # We need the Electron 33 prebuilt instead. Re-run prebuild-install with correct flags.
-        run: |
-          $pkg = Get-ChildItem "node_modules/.pnpm" -Directory -Filter "better-sqlite3@*" | Select-Object -First 1
-          if ($pkg) {
-            $path = Join-Path $pkg.FullName "node_modules/better-sqlite3"
-            Write-Host "Replacing better-sqlite3 binary with Electron 33 prebuilt from: $path"
-            cd $path
-            npx prebuild-install --runtime electron --target 33.4.11 --arch x64
-            Write-Host "Done"
-          } else {
-            Write-Host "WARNING: better-sqlite3 not found in pnpm store"
-          }
-        continue-on-error: true
-
-      - name: Build app
+      - name: Build app (TypeScript + Vite)
         working-directory: artifacts/local-rag
         run: pnpm build
+
+      - name: Flatten pnpm symlinks with pnpm deploy
+        shell: pwsh
+        run: |
+          # ROOT CAUSE FIX: pnpm workspace uses symlinks pointing to the virtual
+          # store (.pnpm). electron-builder cannot reliably follow these symlinks,
+          # so native binaries (node-llama-cpp/bins, better-sqlite3) are missing
+          # from the packaged app → NoBinaryFoundError at runtime.
+          #
+          # `pnpm deploy` creates a portable, flat node_modules tree (real files,
+          # no symlinks) and re-runs lifecycle scripts (so node-llama-cpp downloads
+          # its Windows binary into the deploy directory).
+          Write-Host "Running pnpm deploy to create flat node_modules..."
+          pnpm --filter @workspace/local-rag deploy ./deploy-prod
+          Write-Host "pnpm deploy done"
+
+          # Verify node-llama-cpp binary was downloaded
+          $binsDir = "deploy-prod/node_modules/node-llama-cpp"
+          if (Test-Path $binsDir) {
+            Write-Host "node-llama-cpp contents:"
+            Get-ChildItem $binsDir | ForEach-Object { Write-Host "  $($_.Name)" }
+            $bins = Join-Path $binsDir "bins"
+            if (Test-Path $bins) {
+              Write-Host "node-llama-cpp/bins:"
+              Get-ChildItem $bins -Recurse | ForEach-Object { Write-Host "  $($_.FullName)" }
+            } else {
+              Write-Host "WARNING: bins/ not found inside node-llama-cpp"
+            }
+          } else {
+            Write-Host "WARNING: node-llama-cpp not found in deploy-prod"
+          }
+
+          # Replace the symlinked node_modules with the flat deployed version
+          Remove-Item -Recurse -Force "artifacts/local-rag/node_modules" -ErrorAction SilentlyContinue
+          Move-Item "deploy-prod/node_modules" "artifacts/local-rag/node_modules"
+          Write-Host "Replaced symlinked node_modules with flat node_modules"
+
+      - name: Overwrite better-sqlite3 with Electron 33 prebuilt
+        shell: pwsh
+        # pnpm deploy runs better-sqlite3's install which grabs the Node.js prebuilt.
+        # We need the Electron 33 prebuilt instead.
+        run: |
+          $bsqlPath = "artifacts/local-rag/node_modules/better-sqlite3"
+          if (Test-Path $bsqlPath) {
+            Write-Host "Installing Electron 33 prebuilt for better-sqlite3 at: $bsqlPath"
+            Push-Location $bsqlPath
+            npx prebuild-install --runtime electron --target 33.4.11 --arch x64
+            Pop-Location
+            Write-Host "Done"
+          } else {
+            Write-Host "WARNING: better-sqlite3 not found at $bsqlPath"
+          }
+        continue-on-error: true
 
       - name: Package as Windows installer
         working-directory: artifacts/local-rag
@@ -81,9 +116,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_msvs_version: '2022'
-          # Force C++20 for MSVC — Electron 33 headers require it
-          # node-gyp bundled in older electron-builder can wrongly override to C++17
-          npm_config_node_gyp_force_process_config: 'true'
 
       - name: Upload .exe installer
         if: always()

@@ -6,11 +6,13 @@
     output: "release",
     buildResources: "assets"
   },
+  // node_modules MUST be included — native binaries (node-llama-cpp, better-sqlite3) live there.
+  // asar:false avoids ASAR path-resolution issues with __dirname-based binary lookups.
   files: [
     "dist/**/*",
-    "!dist/**/*.map"
+    "!dist/**/*.map",
+    "node_modules/**/*"
   ],
-  extraResources: [],
   win: {
     target: [
       {
@@ -34,12 +36,8 @@
     installerHeaderIcon: "assets/icon.ico",
     license: "LICENSE"
   },
-  asar: true,
-  asarUnpack: [
-    "node_modules/better-sqlite3/**/*",
-    "node_modules/node-llama-cpp/**/*"
-  ],
-  npmRebuild: true,
+  asar: false,
+  npmRebuild: false,
   nodeGypRebuild: false,
   publish: null
 }
