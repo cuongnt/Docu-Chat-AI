@@ -1,5 +1,14 @@
 import path from "path";
 
+// node-llama-cpp is ESM-only. TypeScript with module:CommonJS converts
+// `await import(...)` to `require()` which fails for ESM packages.
+// Using new Function bypasses TypeScript's static transformation so the
+// compiled output keeps a real dynamic import() call at runtime.
+async function importLlamaCpp(): Promise<typeof import("node-llama-cpp")> {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  return new Function('return import("node-llama-cpp")')();
+}
+
 // node-llama-cpp v3 — loaded lazily to avoid startup cost
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let llamaInstance: any = null;
@@ -19,7 +28,7 @@ export async function loadModel(
   try {
     await unloadModel();
 
-    const { getLlama } = await import("node-llama-cpp");
+    const { getLlama } = await importLlamaCpp();
     llamaInstance = await getLlama();
     loadedModel = await llamaInstance.loadModel({ modelPath });
     modelContext = await loadedModel.createContext({ contextSize: 4096 });
@@ -91,7 +100,7 @@ export async function streamInference(
   // Run async but return controller immediately
   (async () => {
     try {
-      const { LlamaChatSession } = await import("node-llama-cpp");
+      const { LlamaChatSession } = await importLlamaCpp();
       const sequence = modelContext.getSequence();
       const session = new LlamaChatSession({
         contextSequence: sequence,
@@ -134,7 +143,7 @@ export async function generateText(
     throw new Error("Mô hình chưa được tải");
   }
 
-  const { LlamaChatSession } = await import("node-llama-cpp");
+  const { LlamaChatSession } = await importLlamaCpp();
   const sequence = modelContext.getSequence();
   const session = new LlamaChatSession({
     contextSequence: sequence,
