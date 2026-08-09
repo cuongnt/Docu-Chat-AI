@@ -22,10 +22,6 @@
     "pdf-parse": "^1.1.1",
     "xlsx": "^0.18.5"
   },
-  "optionalDependencies": {
-    "@rollup/rollup-win32-x64-msvc": "*",
-    "@rollup/rollup-linux-x64-gnu": "*"
-  },
   "devDependencies": {
     "@tailwindcss/vite": "catalog:",
     "@types/better-sqlite3": "^7.6.13",
